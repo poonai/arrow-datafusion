@@ -41,6 +41,16 @@ async fn csv_query_avg_multi_batch() -> Result<()> {
 }
 
 #[tokio::test]
+async fn ctx_based_avg() -> Result<()> {
+    let ctx = SessionContext::new();
+    let testdata = datafusion::test_util::arrow_test_data();
+    let df = ctx.read_csv(format!("{}/csv/aggregate_test_100.csv", testdata), CsvReadOptions::new()).await?;
+    let df = df.aggregate(vec![], vec![avg(col("c12"))])?;
+    df.show().await?;
+    Ok(())
+}
+
+#[tokio::test]
 async fn csv_query_avg() -> Result<()> {
     let ctx = SessionContext::new();
     register_aggregate_csv(&ctx).await?;
