@@ -222,6 +222,10 @@ impl ExprRewritable for Expr {
                 fun,
                 distinct,
             },
+            Expr::AggregationWithFilters { expr, filter } => Expr::AggregationWithFilters { 
+                expr: rewrite_boxed(expr, rewriter)?,
+                filter: rewrite_boxed(filter, rewriter)?
+             },
             Expr::GroupingSet(grouping_set) => match grouping_set {
                 GroupingSet::Rollup(exprs) => {
                     Expr::GroupingSet(GroupingSet::Rollup(rewrite_vec(exprs, rewriter)?))

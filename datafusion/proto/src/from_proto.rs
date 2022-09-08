@@ -891,6 +891,9 @@ pub fn parse_expr(
                 distinct: expr.distinct,
             })
         }
+        ExprType::AggregateWithFilter(expr) => {
+            todo!()
+        }
         ExprType::Alias(alias) => Ok(Expr::Alias(
             Box::new(parse_required_expr(&alias.expr, registry, "expr")?),
             alias.alias.clone(),

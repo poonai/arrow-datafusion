@@ -114,6 +114,7 @@ impl ExpressionVisitor for ApplicabilityVisitor<'_> {
             // - ScalarVariable could be `applicable`, but that would require access to the context
             Expr::AggregateUDF { .. }
             | Expr::AggregateFunction { .. }
+            | Expr::AggregationWithFilters { .. }
             | Expr::Sort { .. }
             | Expr::WindowFunction { .. }
             | Expr::Wildcard

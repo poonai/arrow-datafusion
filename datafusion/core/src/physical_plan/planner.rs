@@ -36,7 +36,7 @@ use crate::logical_plan::{
     UserDefinedLogicalNode,
 };
 use crate::logical_plan::{Limit, Values};
-use crate::physical_expr::create_physical_expr;
+use crate::physical_expr::{create_physical_expr,expr_with_filter};
 use crate::physical_optimizer::optimizer::PhysicalOptimizerRule;
 use crate::physical_plan::aggregates::{AggregateExec, AggregateMode, PhysicalGroupBy};
 use crate::physical_plan::cross_join::CrossJoinExec;
@@ -201,6 +201,9 @@ fn create_physical_name(e: &Expr, is_first_expr: bool) -> Result<String> {
                 names.push(create_physical_name(e, false)?);
             }
             Ok(format!("{}({})", fun.name, names.join(",")))
+        }
+        Expr::AggregationWithFilters { expr, filter } => {
+            Ok(format!("{} FILTER (WHERE {})", expr, filter))
         }
         Expr::GroupingSet(grouping_set) => match grouping_set {
             GroupingSet::Rollup(exprs) => Ok(format!(
@@ -574,11 +577,18 @@ impl DefaultPhysicalPlanner {
                     let aggregates = aggr_expr
                         .iter()
                         .map(|e| {
+                            let (expr, filter) = match e {
+                                Expr::AggregationWithFilters { expr, filter } => {
+                                    (&**expr, Some(&**filter))
+                                },
+                                _ => (e, None)
+                            };
                             create_aggregate_expr(
-                                e,
+                                expr,
                                 logical_input_schema,
                                 &physical_input_schema,
                                 &session_state.execution_props,
+                                filter
                             )
                         })
                         .collect::<Result<Vec<_>>>()?;
@@ -1417,6 +1427,7 @@ pub fn create_aggregate_expr_with_name(
     logical_input_schema: &DFSchema,
     physical_input_schema: &Schema,
     execution_props: &ExecutionProps,
+    filter: Option<&Expr>,
 ) -> Result<Arc<dyn AggregateExpr>> {
     match e {
         Expr::AggregateFunction {
@@ -1428,12 +1439,25 @@ pub fn create_aggregate_expr_with_name(
             let args = args
                 .iter()
                 .map(|e| {
-                    create_physical_expr(
+                    let physical_expr = create_physical_expr(
                         e,
                         logical_input_schema,
                         physical_input_schema,
                         execution_props,
-                    )
+                    )?;
+                    let expr = match filter {
+                        Some(filter) => {
+                            let filter_expr = create_physical_expr(
+                                filter,
+                                logical_input_schema,
+                                physical_input_schema,
+                                execution_props,
+                            )?;
+                            expr_with_filter(physical_expr, filter_expr)
+                        }
+                        None => physical_expr,
+                    };
+                    Ok(expr)
                 })
                 .collect::<Result<Vec<_>>>()?;
             aggregates::create_aggregate_expr(
@@ -1448,17 +1472,31 @@ pub fn create_aggregate_expr_with_name(
             let args = args
                 .iter()
                 .map(|e| {
-                    create_physical_expr(
+                    let physical_expr = create_physical_expr(
                         e,
                         logical_input_schema,
                         physical_input_schema,
                         execution_props,
-                    )
+                    )?;
+                    let expr = match filter {
+                        Some(filter) => {
+                            let filter_expr = create_physical_expr(
+                                e,
+                                logical_input_schema,
+                                physical_input_schema,
+                                execution_props,
+                            )?;
+                            expr_with_filter(physical_expr, filter_expr)
+                        }
+                        None => physical_expr,
+                    };
+                    Ok(expr)
                 })
                 .collect::<Result<Vec<_>>>()?;
 
             udaf::create_aggregate_expr(fun, &args, physical_input_schema, name)
         }
+
         other => Err(DataFusionError::Internal(format!(
             "Invalid aggregate expression '{:?}'",
             other
@@ -1472,6 +1510,7 @@ pub fn create_aggregate_expr(
     logical_input_schema: &DFSchema,
     physical_input_schema: &Schema,
     execution_props: &ExecutionProps,
+    filter: Option<&Expr>,
 ) -> Result<Arc<dyn AggregateExpr>> {
     // unpack (nested) aliased logical expressions, e.g. "sum(col) as total"
     let (name, e) = match e {
@@ -1485,6 +1524,7 @@ pub fn create_aggregate_expr(
         logical_input_schema,
         physical_input_schema,
         execution_props,
+        filter,
     )
 }
 

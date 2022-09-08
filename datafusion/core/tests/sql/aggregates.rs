@@ -41,12 +41,23 @@ async fn csv_query_avg_multi_batch() -> Result<()> {
 }
 
 #[tokio::test]
-async fn ctx_based_avg() -> Result<()> {
+async fn csv_query_avg_with_filter() -> Result<()> {
     let ctx = SessionContext::new();
-    let testdata = datafusion::test_util::arrow_test_data();
-    let df = ctx.read_csv(format!("{}/csv/aggregate_test_100.csv", testdata), CsvReadOptions::new()).await?;
-    let df = df.aggregate(vec![], vec![avg(col("c12"))])?;
-    df.show().await?;
+    register_aggregate_csv(&ctx).await?;
+    let sql = "SELECT avg(c12) FILTER (WHERE c1 = 'b') FROM aggregate_test_100";
+    let plan = ctx.create_logical_plan(sql).unwrap();
+    let plan = ctx.optimize(&plan).unwrap();
+    let plan = ctx.create_physical_plan(&plan).await.unwrap();
+    let task_ctx = ctx.task_ctx();
+    let results = collect(plan, task_ctx).await.unwrap();
+    let batch = &results[0];
+    let column = batch.column(0);
+    let array = column.as_any().downcast_ref::<Float64Array>().unwrap();
+    let actual = array.value(0);
+    let expected = 0.4104070;
+    // Due to float number's accuracy, different batch size will lead to different
+    // answers.
+    assert!((expected - actual).abs() < 0.01);
     Ok(())
 }
 

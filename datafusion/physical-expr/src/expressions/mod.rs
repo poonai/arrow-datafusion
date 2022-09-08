@@ -33,6 +33,7 @@ mod negative;
 mod not;
 mod nullif;
 mod try_cast;
+mod with_filter;
 
 /// Module with some convenient methods used in expression building
 pub mod helpers {
@@ -61,6 +62,8 @@ pub use crate::aggregate::sum::Sum;
 pub use crate::aggregate::sum_distinct::DistinctSum;
 pub use crate::aggregate::variance::{Variance, VariancePop};
 
+
+
 pub use crate::window::cume_dist::cume_dist;
 pub use crate::window::lead_lag::{lag, lead};
 pub use crate::window::nth_value::NthValue;
@@ -83,12 +86,14 @@ pub use negative::{negative, NegativeExpr};
 pub use not::{not, NotExpr};
 pub use nullif::nullif_func;
 pub use try_cast::{try_cast, TryCastExpr};
+pub use with_filter::{ExprWithFilter, batch_filter};
 
 /// returns the name of the state
 pub fn format_state_name(name: &str, state_name: &str) -> String {
     format!("{}[{}]", name, state_name)
 }
 pub use crate::PhysicalSortExpr;
+
 
 #[cfg(test)]
 pub(crate) mod tests {

@@ -2101,8 +2101,13 @@ impl<'a, S: ContextProvider> SqlToRel<'a, S> {
                     None => vec![arg],
                 };
                 Ok(Expr::ScalarFunction { fun, args })
-            }
+            },
 
+            SQLExpr::AggregateExpressionWithFilter { expr, filter } => {
+                let expr = self.sql_expr_to_logical_expr(*expr, schema, ctes)?;
+                let filter = self.sql_expr_to_logical_expr(*filter, schema, ctes)?;
+                Ok(Expr::AggregationWithFilters {expr: Box::new(expr), filter: Box::new(filter)})
+            }
             SQLExpr::Function(mut function) => {
                 let name = if function.name.0.len() > 1 {
                     // DF doesn't handle compound identifiers

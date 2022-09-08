@@ -187,6 +187,10 @@ impl ExprVisitable for Expr {
                     .try_fold(visitor, |visitor, arg| arg.accept(visitor))?;
                 Ok(visitor)
             }
+            Expr::AggregationWithFilters { expr, filter } => {
+                let visitor  = expr.accept(visitor)?;
+                filter.accept(visitor)
+            }
             Expr::InList { expr, list, .. } => {
                 let visitor = expr.accept(visitor)?;
                 list.iter()

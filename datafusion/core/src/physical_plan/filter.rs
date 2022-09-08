@@ -24,6 +24,7 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 
 use super::expressions::PhysicalSortExpr;
+use super::expressions::batch_filter;
 use super::{RecordBatchStream, SendableRecordBatchStream, Statistics};
 use crate::error::{DataFusionError, Result};
 use crate::physical_plan::{
@@ -175,29 +176,6 @@ struct FilterExecStream {
     input: SendableRecordBatchStream,
     /// runtime metrics recording
     baseline_metrics: BaselineMetrics,
-}
-
-fn batch_filter(
-    batch: &RecordBatch,
-    predicate: &Arc<dyn PhysicalExpr>,
-) -> ArrowResult<RecordBatch> {
-    predicate
-        .evaluate(batch)
-        .map(|v| v.into_array(batch.num_rows()))
-        .map_err(DataFusionError::into)
-        .and_then(|array| {
-            array
-                .as_any()
-                .downcast_ref::<BooleanArray>()
-                .ok_or_else(|| {
-                    DataFusionError::Internal(
-                        "Filter predicate evaluated to non-boolean value".to_string(),
-                    )
-                    .into()
-                })
-                // apply filter array to record batch
-                .and_then(|filter_array| filter_record_batch(batch, filter_array))
-        })
 }
 
 impl Stream for FilterExecStream {

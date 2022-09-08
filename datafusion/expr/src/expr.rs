@@ -211,6 +211,10 @@ pub enum Expr {
         /// Whether this is a DISTINCT aggregation or not
         distinct: bool,
     },
+    AggregationWithFilters {
+        expr: Box<Expr>,
+        filter: Box<Expr>
+    },
     /// Represents the call of a window function with arguments.
     WindowFunction {
         /// Name of the function
@@ -365,6 +369,7 @@ impl Expr {
             Expr::TryCast { .. } => "TryCast",
             Expr::WindowFunction { .. } => "WindowFunction",
             Expr::Wildcard => "Wildcard",
+            Expr::AggregationWithFilters { .. } => "AggregationWithFilters",
         }
     }
 
@@ -650,6 +655,9 @@ impl fmt::Debug for Expr {
             Expr::AggregateUDF { fun, ref args, .. } => {
                 fmt_function(f, &fun.name, false, args, false)
             }
+            Expr::AggregationWithFilters { expr, filter } => {
+                write!(f,"{:?} FILTER (WHERE {:?})", expr, filter)
+            },
             Expr::Between {
                 expr,
                 negated,
@@ -894,6 +902,9 @@ fn create_name(e: &Expr, input_schema: &DFSchema) -> Result<String> {
             args,
             ..
         } => create_function_name(&fun.to_string(), *distinct, args, input_schema),
+        Expr::AggregationWithFilters { expr, filter } => {
+            Ok(format!("{} FILTER (WHERE {})", create_name(expr, input_schema)?,create_name(filter, input_schema)?))
+        },
         Expr::AggregateUDF { fun, args } => {
             let mut names = Vec::with_capacity(args.len());
             for e in args {

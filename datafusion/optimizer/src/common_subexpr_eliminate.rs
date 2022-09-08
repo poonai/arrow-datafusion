@@ -480,6 +480,9 @@ impl ExprIdentifierVisitor<'_> {
                 desc.push_str("AggregateUDF-");
                 desc.push_str(&fun.name);
             }
+            Expr::AggregationWithFilters { .. } => {
+                desc.push_str("AggregationWithFilters")
+            }
             Expr::InList { negated, .. } => {
                 desc.push_str("InList-");
                 desc.push_str(&negated.to_string());

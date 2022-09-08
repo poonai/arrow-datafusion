@@ -114,6 +114,7 @@ impl ExpressionVisitor for ColumnNameVisitor<'_> {
             | Expr::ScalarUDF { .. }
             | Expr::WindowFunction { .. }
             | Expr::AggregateFunction { .. }
+            | Expr::AggregationWithFilters {..}
             | Expr::GroupingSet(_)
             | Expr::AggregateUDF { .. }
             | Expr::InList { .. }
@@ -245,7 +246,7 @@ pub fn find_aggregate_exprs(exprs: &[Expr]) -> Vec<Expr> {
     find_exprs_in_exprs(exprs, &|nested_expr| {
         matches!(
             nested_expr,
-            Expr::AggregateFunction { .. } | Expr::AggregateUDF { .. }
+            Expr::AggregateFunction { .. } | Expr::AggregateUDF { .. } | Expr::AggregationWithFilters { .. }
         )
     })
 }

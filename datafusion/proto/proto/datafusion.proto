@@ -319,6 +319,7 @@ message LogicalExprNode {
     IsNotTrue is_not_true = 28;
     IsNotFalse is_not_false = 29;
     IsNotUnknown is_not_unknown = 30;
+    AggregateWithFilterExprNode aggregate_with_filter = 31;
   }
 }
 
@@ -506,6 +507,11 @@ message AggregateExprNode {
   AggregateFunction aggr_function = 1;
   repeated LogicalExprNode expr = 2;
   bool distinct = 3;
+}
+
+message AggregateWithFilterExprNode {
+  LogicalExprNode expr = 1;
+  LogicalExprNode filter = 2;
 }
 
 message AggregateUDFExprNode {

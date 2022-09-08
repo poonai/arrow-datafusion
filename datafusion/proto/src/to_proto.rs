@@ -19,6 +19,8 @@
 //! DataFusion logical plans to be serialized and transmitted between
 //! processes.
 
+use std::convert::TryInto;
+
 use crate::protobuf::{
     self,
     plan_type::PlanTypeEnum::{
@@ -557,6 +559,16 @@ impl TryFrom<&Expr> for protobuf::LogicalExprNode {
                 Self {
                     expr_type: Some(ExprType::AggregateExpr(aggregate_expr)),
                 }
+            }
+            Expr::AggregationWithFilters { expr, filter } => {
+                // let expr = Box::new(protobuf::AggregateWithFilterExprNode{
+                //     expr: Some(Box::new(expr.try_into()?)),
+                //     filter: Some(Box::new(filter.try_into()?))
+                // });
+                // Self{
+                //     expr_type: Some(ExprType::AggregateWithFilter(expr))
+                // }
+                todo!()
             }
             Expr::ScalarVariable(_, _) => unimplemented!(),
             Expr::ScalarFunction { ref fun, ref args } => {

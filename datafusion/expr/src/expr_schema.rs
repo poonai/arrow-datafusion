@@ -53,7 +53,10 @@ impl ExprSchemable for Expr {
     /// (e.g. `[utf8] + [bool]`).
     fn get_type<S: ExprSchema>(&self, schema: &S) -> Result<DataType> {
         match self {
-            Expr::Alias(expr, _) | Expr::Sort { expr, .. } | Expr::Negative(expr) => {
+            Expr::Alias(expr, _) 
+            | Expr::Sort { expr, .. } 
+            | Expr::Negative(expr) 
+            | Expr::AggregationWithFilters { expr,.. }=> {
                 expr.get_type(schema)
             }
             Expr::Column(c) => Ok(schema.data_type(c)?.clone()),
@@ -198,6 +201,9 @@ impl ExprSchemable for Expr {
             | Expr::IsNotFalse(_)
             | Expr::IsNotUnknown(_)
             | Expr::Exists { .. } => Ok(false),
+            Expr::AggregationWithFilters { expr, filter } => {
+                Ok(expr.nullable(input_schema)? || filter.nullable(input_schema)?)
+            }
             Expr::InSubquery { expr, .. } => expr.nullable(input_schema),
             Expr::ScalarSubquery(subquery) => {
                 Ok(subquery.subquery.schema().field(0).is_nullable())

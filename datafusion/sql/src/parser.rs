@@ -22,7 +22,7 @@
 use datafusion_expr::logical_plan::FileType;
 use sqlparser::{
     ast::{ColumnDef, ColumnOptionDef, Statement as SQLStatement, TableConstraint},
-    dialect::{keywords::Keyword, Dialect, GenericDialect},
+    dialect::{keywords::Keyword, Dialect, GenericDialect, PostgreSqlDialect},
     parser::{Parser, ParserError},
     tokenizer::{Token, Tokenizer},
 };
@@ -116,7 +116,7 @@ impl<'a> DFParser<'a> {
 
     /// Parse a SQL statement and produce a set of statements with dialect
     pub fn parse_sql(sql: &str) -> Result<VecDeque<Statement>, ParserError> {
-        let dialect = &GenericDialect {};
+        let dialect = &PostgreSqlDialect {};
         DFParser::parse_sql_with_dialect(sql, dialect)
     }
 

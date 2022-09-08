@@ -171,6 +171,12 @@ where
                     .collect::<Result<Vec<Expr>>>()?,
                 distinct: *distinct,
             }),
+            Expr::AggregationWithFilters { expr, filter } => {
+                Ok(Expr::AggregationWithFilters {
+                    expr: Box::new(clone_with_replacement(expr, replacement_fn)?),
+                    filter: Box::new(clone_with_replacement(filter, replacement_fn)?),
+                })
+            },
             Expr::WindowFunction {
                 fun,
                 args,

@@ -444,6 +444,7 @@ impl<'a> ConstEvaluator<'a> {
             // Has no runtime cost, but needed during planning
             Expr::Alias(..)
             | Expr::AggregateFunction { .. }
+            | Expr::AggregationWithFilters { .. }
             | Expr::AggregateUDF { .. }
             | Expr::ScalarVariable(_, _)
             | Expr::Column(_)
