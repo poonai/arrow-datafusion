@@ -416,7 +416,9 @@ fn get_table(
             }
             "parquet" => {
                 let path = format!("{}/{}", path, table);
-                let format = ParquetFormat::default().with_enable_pruning(true);
+                let format = ParquetFormat::default()
+                    .with_enable_pruning(true)
+                    .with_pushdown_filter(true);
 
                 (Arc::new(format), path, DEFAULT_PARQUET_EXTENSION)
             }
