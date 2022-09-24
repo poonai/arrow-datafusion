@@ -149,6 +149,9 @@ pub struct ParquetReadOptions<'a> {
     /// the file Schema. This can help avoid schema conflicts due to
     /// metadata.  Defaults to true.
     pub skip_metadata: bool,
+    /// enables push down filter, which filter the rows while reading the
+    /// files.
+    pub pushdown_filter: bool,
 }
 
 impl<'a> Default for ParquetReadOptions<'a> {
@@ -159,6 +162,7 @@ impl<'a> Default for ParquetReadOptions<'a> {
             table_partition_cols: vec![],
             parquet_pruning: format_default.enable_pruning(),
             skip_metadata: format_default.skip_metadata(),
+            pushdown_filter: false,
         }
     }
 }
@@ -184,11 +188,20 @@ impl<'a> ParquetReadOptions<'a> {
         self
     }
 
+    /// Enable push down filter.
+    pub fn pushdown_filter(mut self, pushdown_filter: bool) -> Self {
+        self.pushdown_filter = pushdown_filter;
+        self
+    }
+
     /// Helper to convert these user facing options to `ListingTable` options
     pub fn to_listing_options(&self, target_partitions: usize) -> ListingOptions {
         let file_format = ParquetFormat::default()
             .with_enable_pruning(self.parquet_pruning)
-            .with_skip_metadata(self.skip_metadata);
+            .with_skip_metadata(self.skip_metadata)
+            .with_pushdown_filter(self.pushdown_filter);
+
+       
 
         ListingOptions {
             format: Arc::new(file_format),

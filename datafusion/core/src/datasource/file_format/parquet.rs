@@ -43,6 +43,7 @@ use crate::error::Result;
 use crate::logical_plan::combine_filters;
 use crate::logical_plan::Expr;
 use crate::physical_plan::expressions::{MaxAccumulator, MinAccumulator};
+use crate::physical_plan::file_format::ParquetScanOptions;
 use crate::physical_plan::file_format::{ParquetExec, SchemaAdapter};
 use crate::physical_plan::{Accumulator, ExecutionPlan, Statistics};
 
@@ -55,6 +56,7 @@ pub struct ParquetFormat {
     enable_pruning: bool,
     metadata_size_hint: Option<usize>,
     skip_metadata: bool,
+    pushdown_filter: bool,
 }
 
 impl Default for ParquetFormat {
@@ -63,6 +65,7 @@ impl Default for ParquetFormat {
             enable_pruning: true,
             metadata_size_hint: None,
             skip_metadata: true,
+            pushdown_filter: false,
         }
     }
 }
@@ -81,6 +84,12 @@ impl ParquetFormat {
     /// another read to fetch the metadata length encoded in the footer.
     pub fn with_metadata_size_hint(mut self, size_hint: usize) -> Self {
         self.metadata_size_hint = Some(size_hint);
+        self
+    }
+
+    /// Enables push down filter.
+    pub fn with_pushdown_filter(mut self, pushdown_filter: bool) -> Self {
+        self.pushdown_filter = pushdown_filter;
         self
     }
     /// Return true if pruning is enabled
@@ -182,11 +191,16 @@ impl FileFormat for ParquetFormat {
             None
         };
 
-        Ok(Arc::new(ParquetExec::new(
-            conf,
-            predicate,
-            self.metadata_size_hint(),
-        )))
+        let mut exec = ParquetExec::new(conf, predicate, self.metadata_size_hint());
+
+        if self.pushdown_filter {
+            exec = exec.with_scan_options(
+                ParquetScanOptions::default()
+                    .with_pushdown_filters(true)
+                    .with_reorder_predicates(true),
+            );
+        }
+        Ok(Arc::new(exec))
     }
 }
 
